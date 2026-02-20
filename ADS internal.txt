@@ -1,0 +1,841 @@
+1. Linear probing and Separate chaining 
+
+import java.util.Scanner;
+import java.util.ArrayList;
+
+public class HashingTechniques {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter Hash Table Size: ");
+        int size = sc.nextInt();
+        
+        System.out.print("Enter number of keys to insert: ");
+        int n = sc.nextInt();
+        
+        int[] keys = new int[n];
+        System.out.println("Enter the keys:");
+        for (int i = 0; i < n; i++) {
+            keys[i] = sc.nextInt();
+        }
+        
+        // ==========================================
+        // 1. LINEAR PROBING
+        // ==========================================
+        int[] linearTable = new int[size];
+        
+        // Fill table with -1 to indicate empty slots
+        for (int i = 0; i < size; i++) {
+            linearTable[i] = -1;
+        }
+        
+        for (int i = 0; i < n; i++) {
+            int key = keys[i];
+            int index = key % size;
+            
+            // If the spot is taken, keep moving forward by 1 (Linear Probing)
+            while (linearTable[index] != -1) {
+                index = (index + 1) % size; // Wrap around to the start if we hit the end
+            }
+            linearTable[index] = key;
+        }
+        
+        System.out.println("\n--- Linear Probing Table ---");
+        for (int i = 0; i < size; i++) {
+            if (linearTable[i] == -1) {
+                System.out.println("Index " + i + ": Empty");
+            } else {
+                System.out.println("Index " + i + ": " + linearTable[i]);
+            }
+        }
+        
+        // ==========================================
+        // 2. SEPARATE CHAINING
+        // ==========================================
+        // Create an array of ArrayLists to hold multiple values at one index
+        ArrayList<Integer>[] chainTable = new ArrayList[size];
+        
+        for (int i = 0; i < size; i++) {
+            chainTable[i] = new ArrayList<>(); // Initialize empty lists
+        }
+        
+        for (int i = 0; i < n; i++) {
+            int key = keys[i];
+            int index = key % size;
+            
+            // Simply add the key to the list at that index
+            chainTable[index].add(key);
+        }
+        
+        System.out.println("\n--- Separate Chaining Table ---");
+        for (int i = 0; i < size; i++) {
+            System.out.print("Index " + i + ": ");
+            if (chainTable[i].isEmpty()) {
+                System.out.print("Empty");
+            } else {
+                for (int j = 0; j < chainTable[i].size(); j++) {
+                    System.out.print(chainTable[i].get(j));
+                    if (j < chainTable[i].size() - 1) System.out.print(" -> ");
+                }
+            }
+            System.out.println();
+        }
+        
+        sc.close();
+    }
+}
+
+Enter Hash Table Size: 5
+Enter number of keys to insert: 4
+Enter the keys:
+12 22 15 25
+
+--- Linear Probing Table ---
+Index 0: 15
+Index 1: 25
+Index 2: 12
+Index 3: 22
+Index 4: Empty
+
+--- Separate Chaining Table ---
+Index 0: 15 -> 25
+Index 1: Empty
+Index 2: 12 -> 22
+Index 3: Empty
+Index 4: Empty
+
+
+2. Boyermoore 
+
+import java.util.Scanner;
+
+public class BoyerMoore {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter the main text: ");
+        String text = sc.nextLine();
+        
+        System.out.print("Enter the pattern to search: ");
+        String pat = sc.nextLine();
+        
+        int n = text.length();
+        int m = pat.length();
+        
+        if (m == 0 || m > n) {
+            System.out.println("Pattern cannot be found.");
+            return;
+        }
+
+        // --- STEP 1: Build the Bad Character Array ---
+        // We use 256 to cover all standard ASCII characters
+        int[] badChar = new int[256];
+        
+        // Initialize all to -1 (meaning character is not in the pattern)
+        for (int i = 0; i < 256; i++) {
+            badChar[i] = -1;
+        }
+        
+        // Record the actual last index of each character present in the pattern
+        for (int i = 0; i < m; i++) {
+            badChar[(int) pat.charAt(i)] = i;
+        }
+
+        // --- STEP 2: Search the Text ---
+        int shift = 0; // Tracks our position in the main text
+        boolean found = false;
+        
+        System.out.println(); // Blank line for clean output
+
+        // We can shift up to (n - m) times before running out of text
+        while (shift <= (n - m)) {
+            int j = m - 1; // Start comparing from the rightmost character of the pattern
+            
+            // Keep moving left as long as characters match
+            while (j >= 0 && pat.charAt(j) == text.charAt(shift + j)) {
+                j--;
+            }
+            
+            // If j drops below 0, every character matched!
+            if (j < 0) {
+                System.out.println("Pattern found at index " + shift);
+                found = true;
+                
+                // Calculate the next shift to find multiple occurrences
+                if (shift + m < n) {
+                    shift += m - badChar[(int) text.charAt(shift + m)];
+                } else {
+                    shift += 1; // Reached the end
+                }
+            } 
+            // If there is a mismatch
+            else {
+                // Find where the mismatched text character last appeared in our pattern
+                int mismatchedChar = (int) text.charAt(shift + j);
+                int skip = j - badChar[mismatchedChar];
+                
+                // Shift the pattern. If skip is negative (which can happen), just shift by 1 to avoid moving backwards.
+                if (skip > 0) {
+                    shift += skip;
+                } else {
+                    shift += 1;
+                }
+            }
+        }
+        
+        if (!found) {
+            System.out.println("Pattern not found in the text.");
+        }
+        
+        sc.close();
+    }
+}
+
+Enter the main text: THIS IS A TEST TEXT
+Enter the pattern to search: TEST
+
+Pattern found at index 10
+
+
+3. KMP pattern matching algorithm 
+
+import java.util.Scanner;
+
+public class KMP {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter the main text: ");
+        String text = sc.next();
+        
+        System.out.print("Enter the pattern to search: ");
+        String pat = sc.next();
+        
+        int n = text.length();
+        int m = pat.length();
+        
+        if (m == 0 || m > n) {
+            System.out.println("Pattern cannot be found.");
+            return;
+        }
+
+        // --- STEP 1: Build the LPS Array ---
+        int[] lps = new int[m];
+        int len = 0; // Length of the previous longest prefix suffix
+        int i = 1;
+        lps[0] = 0;  // LPS of the first character is always 0
+        
+        while (i < m) {
+            if (pat.charAt(i) == pat.charAt(len)) {
+                len++;
+                lps[i] = len;
+                i++;
+            } else {
+                if (len != 0) {
+                    len = lps[len - 1]; // Fall back to the previous known prefix
+                } else {
+                    lps[i] = 0;
+                    i++;
+                }
+            }
+        }
+
+        // --- STEP 2: Search the Text ---
+        i = 0; // Index for the main text
+        int j = 0; // Index for the pattern
+        boolean found = false;
+
+        System.out.println(); // Just printing a blank line for clean output
+        
+        while (i < n) {
+            // If characters match, move both pointers forward
+            if (pat.charAt(j) == text.charAt(i)) {
+                j++;
+                i++;
+            }
+            
+            // If we matched the whole pattern, we found a target!
+            if (j == m) {
+                System.out.println("Pattern found at index " + (i - j));
+                found = true;
+                j = lps[j - 1]; // Reset j using the LPS array to find more matches
+            } 
+            // If there is a mismatch after some matches
+            else if (i < n && pat.charAt(j) != text.charAt(i)) {
+                if (j != 0) {
+                    j = lps[j - 1]; // Skip ahead using the LPS array!
+                } else {
+                    i++; // If j is 0, we just move the text pointer forward
+                }
+            }
+        }
+        
+        if (!found) {
+            System.out.println("Pattern not found in the text.");
+        }
+        
+        sc.close();
+    }
+}
+
+Enter the main text: ABABDABACDABABCABAB
+Enter the pattern to search: ABABCABAB
+
+Pattern found at index 10
+
+
+4. LCS algorithm 
+
+import java.util.Scanner;
+
+public class LCS {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter the first string: ");
+        String s1 = sc.next();
+        
+        System.out.print("Enter the second string: ");
+        String s2 = sc.next();
+        
+        int m = s1.length();
+        int n = s2.length();
+        
+        // Create a 2D array for Dynamic Programming
+        // Java auto-fills this with 0s, which handles our base cases perfectly
+        int[][] dp = new int[m + 1][n + 1];
+        
+        // Step 1: Build the DP table
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                // If characters match, add 1 to the diagonal value
+                if (s1.charAt(i - 1) == s2.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } 
+                // If they don't match, take the maximum of the cell above or to the left
+                else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+        
+        int length = dp[m][n];
+        System.out.println("\nLength of Longest Common Subsequence: " + length);
+        
+        // Step 2: Trace backwards to find the actual sequence
+        char[] lcs = new char[length];
+        int i = m;
+        int j = n;
+        
+        // We fill the array from the end to the beginning
+        while (i > 0 && j > 0) {
+            // If characters match, they are part of the LCS
+            if (s1.charAt(i - 1) == s2.charAt(j - 1)) {
+                lcs[length - 1] = s1.charAt(i - 1);
+                i--;
+                j--;
+                length--; // Move to the previous character slot
+            } 
+            // If they don't match, move in the direction of the larger number
+            else if (dp[i - 1][j] > dp[i][j - 1]) {
+                i--;
+            } else {
+                j--;
+            }
+        }
+        
+        System.out.print("The Sequence is: ");
+        for (char c : lcs) {
+            System.out.print(c);
+        }
+        System.out.println();
+        
+        sc.close();
+    }
+}
+
+Enter the first string: AGGTAB
+Enter the second string: GXTXAYB
+
+Length of Longest Common Subsequence: 4
+The Sequence is: GTAB
+
+
+5. Topological sorting 
+
+import java.util.Scanner;
+
+public class TopologicalSort {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter number of vertices: ");
+        int n = sc.nextInt();
+        
+        int[][] adj = new int[n][n];
+        int[] inDegree = new int[n];
+        boolean[] visited = new boolean[n];
+        
+        System.out.println("Enter the adjacency matrix (0s and 1s):");
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                adj[i][j] = sc.nextInt();
+                // If there's an edge from i to j, increase j's in-degree
+                if (adj[i][j] == 1) {
+                    inDegree[j]++; 
+                }
+            }
+        }
+        
+        System.out.print("Topological Sort: ");
+        
+        // We need to process all 'n' vertices
+        for (int count = 0; count < n; count++) {
+            int selected = -1;
+            
+            // Step 1: Find an unvisited vertex with 0 incoming edges
+            for (int i = 0; i < n; i++) {
+                if (!visited[i] && inDegree[i] == 0) {
+                    selected = i;
+                    break;
+                }
+            }
+            
+            // If we can't find one, a cycle exists (invalid for Topological Sort)
+            if (selected == -1) {
+                System.out.println("\nGraph has a cycle! Sort not possible.");
+                return;
+            }
+            
+            // Step 2: Print the selected vertex and mark it visited
+            System.out.print(selected + " ");
+            visited[selected] = true;
+            
+            // Step 3: Remove this vertex's outgoing edges by reducing neighbors' in-degrees
+            for (int j = 0; j < n; j++) {
+                if (adj[selected][j] == 1) {
+                    inDegree[j]--;
+                }
+            }
+        }
+        
+        System.out.println();
+        sc.close();
+    }
+}
+
+Enter number of vertices: 4
+Enter the adjacency matrix (0s and 1s):
+0 1 1 0
+0 0 0 1
+0 0 0 1
+0 0 0 0
+
+Topological Sort: 0 1 2 3
+
+
+6. Shortest path by BFS
+
+import java.util.Scanner;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class BFSShortestPath {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter number of vertices: ");
+        int n = sc.nextInt();
+        
+        int[][] adj = new int[n][n];
+        System.out.println("Enter the adjacency matrix (0s and 1s):");
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                adj[i][j] = sc.nextInt();
+            }
+        }
+        
+        System.out.print("Enter the starting vertex (0 to " + (n-1) + "): ");
+        int start = sc.nextInt();
+        
+        // Setup distance array (-1 means unvisited)
+        int[] distance = new int[n];
+        for (int i = 0; i < n; i++) {
+            distance[i] = -1;
+        }
+        
+        // Setup Queue for BFS
+        Queue<Integer> queue = new LinkedList<>();
+        
+        // Start from the source vertex
+        queue.add(start);
+        distance[start] = 0; // Distance to itself is 0
+        
+        System.out.println("\nShortest path distances from vertex " + start + ":");
+        
+        // Standard BFS Loop
+        while (!queue.isEmpty()) {
+            int current = queue.poll(); // Get the front vertex
+            System.out.println("Distance to vertex " + current + " is " + distance[current]);
+            
+            // Check all possible neighbors
+            for (int j = 0; j < n; j++) {
+                // If there is an edge AND the neighbor is unvisited
+                if (adj[current][j] == 1 && distance[j] == -1) {
+                    distance[j] = distance[current] + 1; // It is 1 step further away
+                    queue.add(j); // Add to queue for future processing
+                }
+            }
+        }
+        
+        sc.close();
+    }
+}
+
+Enter number of vertices: 4
+Enter the adjacency matrix (0s and 1s):
+0 1 1 0
+1 0 0 1
+1 0 0 0
+0 1 0 0
+Enter the starting vertex (0 to 3): 0
+
+Shortest path distances from vertex 0:
+Distance to vertex 0 is 0
+Distance to vertex 1 is 1
+Distance to vertex 2 is 1
+Distance to vertex 3 is 2
+
+
+7. Djikasra's algorithm 
+
+import java.util.Scanner;
+
+public class Dijkstra {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter number of vertices: ");
+        int n = sc.nextInt();
+        
+        int[][] adj = new int[n][n];
+        System.out.println("Enter the weighted adjacency matrix (use 0 for no edge):");
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                adj[i][j] = sc.nextInt();
+            }
+        }
+        
+        System.out.print("Enter the starting vertex (0 to " + (n-1) + "): ");
+        int start = sc.nextInt();
+        
+        int[] distance = new int[n];
+        boolean[] visited = new boolean[n];
+        
+        // Step 1: Set all distances to infinity and mark as unvisited
+        for (int i = 0; i < n; i++) {
+            distance[i] = Integer.MAX_VALUE;
+            visited[i] = false;
+        }
+        distance[start] = 0; // Distance to the starting vertex is always 0
+        
+        // Step 2: Main loop to process vertices
+        for (int count = 0; count < n - 1; count++) {
+            
+            // Find the unvisited vertex with the minimum distance
+            int minVertex = -1;
+            int minDistance = Integer.MAX_VALUE;
+            
+            for (int i = 0; i < n; i++) {
+                if (!visited[i] && distance[i] < minDistance) {
+                    minDistance = distance[i];
+                    minVertex = i;
+                }
+            }
+            
+            // If we can't find a connected vertex, stop
+            if (minVertex == -1) break;
+            
+            // Mark the chosen vertex as visited
+            visited[minVertex] = true;
+            
+            // Step 3: Update distances of the adjacent, unvisited vertices
+            for (int j = 0; j < n; j++) {
+                // Check if there is an edge AND it's not visited AND we can reach minVertex
+                if (adj[minVertex][j] != 0 && !visited[j] && distance[minVertex] != Integer.MAX_VALUE) {
+                    
+                    int newDistance = distance[minVertex] + adj[minVertex][j];
+                    
+                    // If the new path is shorter, update it
+                    if (newDistance < distance[j]) {
+                        distance[j] = newDistance;
+                    }
+                }
+            }
+        }
+        
+        // Print the final shortest distances
+        System.out.println("\nShortest path distances from vertex " + start + ":");
+        for (int i = 0; i < n; i++) {
+            if (distance[i] == Integer.MAX_VALUE) {
+                System.out.println("Vertex " + i + " -> Unreachable");
+            } else {
+                System.out.println("Vertex " + i + " -> " + distance[i]);
+            }
+        }
+        
+        sc.close();
+    }
+}
+
+Enter number of vertices: 4
+Enter the weighted adjacency matrix (use 0 for no edge):
+0 2 5 0
+2 0 1 4
+5 1 0 1
+0 4 1 0
+Enter the starting vertex (0 to 3): 0
+
+Shortest path distances from vertex 0:
+Vertex 0 -> 0
+Vertex 1 -> 2
+Vertex 2 -> 3
+Vertex 3 -> 4
+
+
+8. Bellman -ford algorithm
+
+import java.util.Scanner;
+
+public class BellmanFord {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        System.out.print("Enter number of vertices: ");
+        int v = sc.nextInt();
+        
+        System.out.print("Enter number of edges: ");
+        int e = sc.nextInt();
+        
+        // edges[i][0] = source, edges[i][1] = destination, edges[i][2] = weight
+        int[][] edges = new int[e][3]; 
+        
+        System.out.println("Enter edges (source destination weight):");
+        for (int i = 0; i < e; i++) {
+            edges[i][0] = sc.nextInt();
+            edges[i][1] = sc.nextInt();
+            edges[i][2] = sc.nextInt();
+        }
+        
+        System.out.print("Enter the starting vertex: ");
+        int start = sc.nextInt();
+        
+        // Setup distance array
+        int[] distance = new int[v];
+        for (int i = 0; i < v; i++) {
+            distance[i] = 1000000000; // Representing infinity
+        }
+        distance[start] = 0; // Distance to itself is 0
+        
+        // Step 1: Relax all edges (Vertices - 1) times
+        for (int i = 1; i < v; i++) {
+            for (int j = 0; j < e; j++) {
+                int u = edges[j][0];
+                int dest = edges[j][1];
+                int weight = edges[j][2];
+                
+                // If we can reach 'u' and going through 'u' is shorter, update it
+                if (distance[u] != 1000000000 && distance[u] + weight < distance[dest]) {
+                    distance[dest] = distance[u] + weight;
+                }
+            }
+        }
+        
+        // Step 2: Check for negative weight cycles (Run one more time)
+        boolean hasNegativeCycle = false;
+        for (int j = 0; j < e; j++) {
+            int u = edges[j][0];
+            int dest = edges[j][1];
+            int weight = edges[j][2];
+            
+            if (distance[u] != 1000000000 && distance[u] + weight < distance[dest]) {
+                hasNegativeCycle = true;
+                break; // If we can still find a shorter path, a cycle exists!
+            }
+        }
+        
+        // Output the results
+        if (hasNegativeCycle) {
+            System.out.println("\nGraph contains a negative weight cycle! Shortest paths cannot be calculated.");
+        } else {
+            System.out.println("\nShortest path distances from vertex " + start + ":");
+            for (int i = 0; i < v; i++) {
+                if (distance[i] == 1000000000) {
+                    System.out.println("Vertex " + i + " -> Unreachable");
+                } else {
+                    System.out.println("Vertex " + i + " -> " + distance[i]);
+                }
+            }
+        }
+        
+        sc.close();
+    }
+}
+
+Enter number of vertices: 4
+Enter number of edges: 4
+Enter edges (source destination weight):
+0 1 4
+0 2 5
+2 1 -3
+1 3 2
+Enter the starting vertex: 0
+
+Shortest path distances from vertex 0:
+Vertex 0 -> 0
+Vertex 1 -> 2
+Vertex 2 -> 5
+Vertex 3 -> 4
+
+
+9. Stassen's algorithm 
+
+import java.util.Scanner;
+
+public class Strassen {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        int[][] A = new int[2][2];
+        int[][] B = new int[2][2];
+        int[][] C = new int[2][2];
+        
+        System.out.println("Enter 4 elements for 2x2 Matrix A:");
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                A[i][j] = sc.nextInt();
+            }
+        }
+        
+        System.out.println("Enter 4 elements for 2x2 Matrix B:");
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                B[i][j] = sc.nextInt();
+            }
+        }
+        
+        // The 7 core Strassen's equations
+        int m1 = (A[0][0] + A[1][1]) * (B[0][0] + B[1][1]);
+        int m2 = (A[1][0] + A[1][1]) * B[0][0];
+        int m3 = A[0][0] * (B[0][1] - B[1][1]);
+        int m4 = A[1][1] * (B[1][0] - B[0][0]);
+        int m5 = (A[0][0] + A[0][1]) * B[1][1];
+        int m6 = (A[1][0] - A[0][0]) * (B[0][0] + B[0][1]);
+        int m7 = (A[0][1] - A[1][1]) * (B[1][0] + B[1][1]);
+        
+        // Calculating the final 4 elements of Matrix C
+        C[0][0] = m1 + m4 - m5 + m7;
+        C[0][1] = m3 + m5;
+        C[1][0] = m2 + m4;
+        C[1][1] = m1 - m2 + m3 + m6;
+        
+        System.out.println("\nResultant Matrix C (Using Strassen's):");
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                System.out.print(C[i][j] + " ");
+            }
+            System.out.println();
+        }
+        
+        sc.close();
+    }
+}
+
+Enter 4 elements for 2x2 Matrix A:
+1 2
+3 4
+Enter 4 elements for 2x2 Matrix B:
+5 6
+7 8
+
+Resultant Matrix C (Using Strassen's):
+19 22 
+43 50
+
+
+10. Polynomial addition and multiplication
+
+import java.util.Scanner;
+
+public class PolynomialOps {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        // --- READ POLYNOMIAL 1 ---
+        System.out.print("Enter highest degree of Polynomial 1: ");
+        int deg1 = sc.nextInt();
+        int[] P1 = new int[deg1 + 1];
+        
+        System.out.println("Enter coefficients from lowest degree (x^0) to highest (x^" + deg1 + "):");
+        for (int i = 0; i <= deg1; i++) {
+            P1[i] = sc.nextInt();
+        }
+        
+        // --- READ POLYNOMIAL 2 ---
+        System.out.print("Enter highest degree of Polynomial 2: ");
+        int deg2 = sc.nextInt();
+        int[] P2 = new int[deg2 + 1];
+        
+        System.out.println("Enter coefficients from lowest degree (x^0) to highest (x^" + deg2 + "):");
+        for (int i = 0; i <= deg2; i++) {
+            P2[i] = sc.nextInt();
+        }
+        
+        // --- POLYNOMIAL ADDITION ---
+        // Find the larger degree to set the size of the sum array
+        int maxDeg = (deg1 > deg2) ? deg1 : deg2;
+        int[] sum = new int[maxDeg + 1];
+        
+        // Just add coefficients from both arrays into the sum array
+        for (int i = 0; i <= deg1; i++) sum[i] += P1[i];
+        for (int i = 0; i <= deg2; i++) sum[i] += P2[i];
+        
+        System.out.print("\nPolynomial Addition Result: ");
+        for (int i = maxDeg; i >= 0; i--) {
+            System.out.print(sum[i] + "x^" + i);
+            if (i > 0) System.out.print(" + "); // Add the plus sign between terms
+        }
+        System.out.println();
+        
+        // --- POLYNOMIAL MULTIPLICATION ---
+        // The highest degree in multiplication is the sum of both highest degrees
+        int[] prod = new int[deg1 + deg2 + 1];
+        
+        // Multiply every term in P1 with every term in P2
+        for (int i = 0; i <= deg1; i++) {
+            for (int j = 0; j <= deg2; j++) {
+                // When multiplying x^i and x^j, exponents add up (i+j)
+                prod[i + j] += P1[i] * P2[j];
+            }
+        }
+        
+        System.out.print("Polynomial Multiplication Result: ");
+        for (int i = (deg1 + deg2); i >= 0; i--) {
+            System.out.print(prod[i] + "x^" + i);
+            if (i > 0) System.out.print(" + ");
+        }
+        System.out.println();
+        
+        sc.close();
+    }
+}
+
+Enter highest degree of Polynomial 1: 1
+Enter coefficients from lowest degree (x^0) to highest (x^1):
+3 2
+Enter highest degree of Polynomial 2: 1
+Enter coefficients from lowest degree (x^0) to highest (x^1):
+1 4
+
+Polynomial Addition Result: 6x^1 + 4x^0
+Polynomial Multiplication Result: 8x^2 + 14x^1 + 3x^0
